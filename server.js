@@ -68,24 +68,23 @@ transporter.verify((error, success) => {
 // --------------------------------------------------
 // RUTAS API
 // --------------------------------------------------
-app.get("/api/devotos/:cui", (req, res) => {
-  const { cui } = req.params;
-  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], (err, results) => {
-    if (err) return res.status(500).json({ error: "Error en la consulta" });
-    if (results.length === 0) return res.status(404).json({ message: "No encontrado" });
-    res.json(results[0]);
-  });
-});
-
 app.post("/api/devotos", (req, res) => {
+  console.log("📩 Datos recibidos:", req.body);
+
   const { cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo } = req.body;
 
   if (!cui || !nombres || !apellidos || !correo) {
+    console.log("⚠️ Campos faltantes");
     return res.status(400).json({ error: "Faltan campos obligatorios" });
   }
 
-  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], (err, results) => {
-    if (err) return res.status(500).json({ error: "Error verificando registro" });
+  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], async (err, results) => {
+    if (err) {
+      console.error("❌ Error en SELECT:", err);
+      return res.status(500).json({ error: "Error verificando registro" });
+    }
+
+    console.log("🔍 Resultado SELECT:", results);
 
     const mailOptions = {
       from: '"Virgen de la Soledad" <virgendelasoledadmixco@gmail.com>',
@@ -93,20 +92,19 @@ app.post("/api/devotos", (req, res) => {
       subject: "Confirmación de registro",
       html: `
         <h2>¡Gracias por registrarte!</h2>
-        <p>Estimado Devota(o), con gran gozo espiritual y profunda devoción comunicamos que la Hermandad de la Virgen de la Soledad ha registrado su pre-inscripción.</p>
-        <p>Le invitamos a estar atento a nuestras redes sociales donde indicaremos la fecha de entrega de su cartulina y el pago correspondiente.</p>
-        <p>¡Que la fe y la devoción sigan guiando nuestro caminar!</p>
+        <p>Su registro ha sido recibido correctamente.</p>
+        <p>Que Dios le bendiga.</p>
       `
     };
 
-    const enviarCorreo = async () => {
-      try {
-        await transporter.sendMail(mailOptions);
-        console.log("📧 Correo enviado a:", correo);
-      } catch (error) {
-        console.error("❌ Error al enviar correo:", error);
-      }
-    };
+    try {
+      console.log("📨 Enviando correo...");
+      await transporter.sendMail(mailOptions);
+      console.log("✅ Correo enviado correctamente");
+    } catch (emailError) {
+      console.error("❌ Error al enviar correo:", emailError);
+      return res.status(500).json({ error: "No se pudo enviar el correo" });
+    }
 
     if (results.length > 0) {
       const sql = `
@@ -116,11 +114,14 @@ app.post("/api/devotos", (req, res) => {
       `;
       const params = [nombres, apellidos, telefono, correo, direccion, fn, nota, sexo, cui];
 
-      db.query(sql, params, async err2 => {
-        if (err2) return res.status(500).json({ error: "Error al actualizar registro" });
+      db.query(sql, params, err2 => {
+        if (err2) {
+          console.error("❌ Error en UPDATE:", err2);
+          return res.status(500).json({ error: "Error al actualizar registro" });
+        }
 
-        await enviarCorreo();
-        res.json({ message: "Actualizado correctamente y correo enviado" });
+        console.log("📝 Registro actualizado");
+        res.json({ message: "Actualizado y correo enviado" });
       });
     } else {
       const sql = `
@@ -129,31 +130,15 @@ app.post("/api/devotos", (req, res) => {
       `;
       const params = [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo];
 
-      db.query(sql, params, async err3 => {
-        if (err3) return res.status(500).json({ error: "Error al guardar registro" });
+      db.query(sql, params, err3 => {
+        if (err3) {
+          console.error("❌ Error en INSERT:", err3);
+          return res.status(500).json({ error: "Error al guardar registro" });
+        }
 
-        await enviarCorreo();
-        res.json({ message: "Registrado correctamente y correo enviado" });
+        console.log("📝 Registro insertado");
+        res.json({ message: "Registrado y correo enviado" });
       });
     }
   });
-});
-
-app.get("/api/all", (req, res) => {
-  db.query("SELECT * FROM devotos ORDER BY fecha_registro DESC", (err, results) => {
-    if (err) return res.status(500).json({ error: "Error cargando registros" });
-    res.json(results);
-  });
-});
-
-// --------------------------------------------------
-// HEALTH CHECK (Render)
-// --------------------------------------------------
-app.get("/healthz", (req, res) => res.send("OK"));
-
-// --------------------------------------------------
-// START SERVER
-// --------------------------------------------------
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
