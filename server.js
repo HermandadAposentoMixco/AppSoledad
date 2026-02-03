@@ -46,22 +46,24 @@ const db = mysql.createPool({
 });
 
 // --------------------------------------------------
-// CONFIG CORREO (GMAIL SMTP)
+// CONFIG CORREO (BREVO SMTP)
 // --------------------------------------------------
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
   auth: {
-    user: "virgendelasoledadmixco@gmail.com",
-    pass: "sfzvbkeulxumhqdp" // 🔐 SIN ESPACIOS
+    user: "a17cbb001@smtp-brevo.com",
+    pass: "M7DBtcf1LbxGAgNq"
   }
 });
 
 // Verificar conexión SMTP
 transporter.verify((error, success) => {
   if (error) {
-    console.error("❌ Error con el correo:", error);
+    console.error("❌ Error con SMTP:", error);
   } else {
-    console.log("✅ Servidor de correo listo para enviar mensajes");
+    console.log("✅ Servidor de correo listo (Brevo)");
   }
 });
 
@@ -74,7 +76,6 @@ app.post("/api/devotos", (req, res) => {
   const { cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo } = req.body;
 
   if (!cui || !nombres || !apellidos || !correo) {
-    console.log("⚠️ Campos faltantes");
     return res.status(400).json({ error: "Faltan campos obligatorios" });
   }
 
@@ -84,15 +85,18 @@ app.post("/api/devotos", (req, res) => {
       return res.status(500).json({ error: "Error verificando registro" });
     }
 
-    console.log("🔍 Resultado SELECT:", results);
+    // Código de verificación
+    const codigo = Math.floor(100000 + Math.random() * 900000);
 
     const mailOptions = {
-      from: '"Virgen de la Soledad" <virgendelasoledadmixco@gmail.com>',
+      from: '"Hermandad Virgen de la Soledad" <no-reply@hermandad.com>',
       to: correo,
       subject: "Confirmación de registro",
       html: `
         <h2>¡Gracias por registrarte!</h2>
-        <p>Su registro ha sido recibido correctamente.</p>
+        <p>Tu código de verificación es:</p>
+        <h1>${codigo}</h1>
+        <p>Por favor, ingrésalo en el sistema para completar tu registro.</p>
         <p>Que Dios le bendiga.</p>
       `
     };
@@ -120,8 +124,10 @@ app.post("/api/devotos", (req, res) => {
           return res.status(500).json({ error: "Error al actualizar registro" });
         }
 
-        console.log("📝 Registro actualizado");
-        res.json({ message: "Actualizado y correo enviado" });
+        res.json({
+          message: "Registro actualizado y correo enviado",
+          codigo
+        });
       });
     } else {
       const sql = `
@@ -136,9 +142,18 @@ app.post("/api/devotos", (req, res) => {
           return res.status(500).json({ error: "Error al guardar registro" });
         }
 
-        console.log("📝 Registro insertado");
-        res.json({ message: "Registrado y correo enviado" });
+        res.json({
+          message: "Registrado correctamente y correo enviado",
+          codigo
+        });
       });
     }
   });
+});
+
+// --------------------------------------------------
+// START SERVER
+// --------------------------------------------------
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
