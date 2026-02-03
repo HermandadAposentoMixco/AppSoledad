@@ -364,22 +364,21 @@
 
     // 📧 Enviar correo con PDF adjunto
     emailjs.send("service_k7ihihy", "template_38g2ifj", {
-      nombres: data.nombres,
-      apellidos: data.apellidos,
-      correo: data.correo,
-      cui: data.cui,
-      telefono: data.telefono || "No proporcionado",
-      direccion: data.direccion || "No proporcionado",
-      turno: data.nota || "No especificado",
-      fecha: new Date().toLocaleDateString(),
-      contraseña: pass,
-      pdf_adjunto: pdfBase64
-    }).then(() => {
-      alert("📧 Comprobante enviado con PDF adjunto.");
-    }).catch((error) => {
-      console.error("Error EmailJS:", error);
-      alert("⚠️ Error al enviar el correo. Revise consola.");
-    });
+  nombres: data.nombres,
+  apellidos: data.apellidos,
+  correo: data.correo,
+  cui: data.cui,
+  telefono: data.telefono || "No proporcionado",
+  direccion: data.direccion || "No proporcionado",
+  turno: data.nota || "No especificado",
+  fecha: new Date().toLocaleDateString(),
+  contraseña: pass
+}).then(() => {
+  alert("📧 Comprobante enviado al correo del usuario.");
+}).catch((error) => {
+  console.error("Error EmailJS:", error);
+  alert("⚠️ Error al enviar el correo.");
+});
 
   } catch(err) {
     console.error("Error PDF:", err);
