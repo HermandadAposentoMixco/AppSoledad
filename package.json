@@ -1,0 +1,30 @@
+{
+  "name": "appsoledad",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HermandadAposentoMixco/AppSoledad.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HermandadAposentoMixco/AppSoledad/issues"
+  },
+  "homepage": "https://github.com/HermandadAposentoMixco/AppSoledad#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mysql2": "^3.16.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
