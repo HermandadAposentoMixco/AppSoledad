@@ -266,7 +266,7 @@
     });
 
     // Generar comprobante
-   devotoForm.addEventListener('submit', async e=>{
+  devotoForm.addEventListener('submit', async e=>{
   e.preventDefault();
   const data = {
     cui: onlyDigits(cuiForm.value),
@@ -285,6 +285,7 @@
     return;
   }
 
+  // Guardar en backend
   try {
     const res = await fetch(`${API_URL}/devotos`, {
       method:'POST',
@@ -297,7 +298,7 @@
     alert('Error al guardar en la base de datos.');
   }
 
-  // Mostrar datos en el comprobante
+  // Mostrar datos en comprobante
   tdCui.textContent = data.cui;
   tdNombres.textContent = data.nombres;
   tdApellidos.textContent = data.apellidos;
@@ -337,22 +338,51 @@
 
   comprobanteContainer.style.display = 'block';
 
-  // 📧 Enviar correo automáticamente con EmailJS
-  emailjs.send("service_k7ihihy", "template_38g2ifj", {
-    nombres: data.nombres,
-    apellidos: data.apellidos,
-    correo: data.correo,
-    cui: data.cui,
-    telefono: data.telefono || "No proporcionado",
-    direccion: data.direccion || "No proporcionado",
-    turno: data.nota || "No especificado",
-    fecha: new Date().toLocaleDateString(),
-    contraseña: pass
-  }).then(() => {
-    alert("📧 Comprobante enviado al correo del usuario.");
-  }).catch((error) => {
-    console.error("Error enviando correo:", error);
-    alert("⚠️ No se pudo enviar el correo, pero el registro sí se guardó.");
-  });
+  // Generar PDF y enviarlo por correo
+  try {
+    const el = document.getElementById('comprobante');
+    const canvas = await html2canvas(el,{scale:2,useCORS:true});
+    const imgData = canvas.toDataURL('image/png');
 
+    const pdf = new jsPDF({unit:'mm', format:'a4'});
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const imgProps = pdf.getImageProperties(imgData);
+
+    let imgWidth = pdfW;
+    let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+    if(imgHeight > pdfH){
+      const scale = pdfH / imgHeight;
+      imgWidth *= scale;
+      imgHeight *= scale;
+    }
+
+    pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
+    pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
+
+    const pdfBase64 = pdf.output('datauristring');
+
+    // 📧 Enviar correo con PDF adjunto
+    emailjs.send("service_k7ihihy", "template_38g2ifj", {
+      nombres: data.nombres,
+      apellidos: data.apellidos,
+      correo: data.correo,
+      cui: data.cui,
+      telefono: data.telefono || "No proporcionado",
+      direccion: data.direccion || "No proporcionado",
+      turno: data.nota || "No especificado",
+      fecha: new Date().toLocaleDateString(),
+      contraseña: pass,
+      pdf_adjunto: pdfBase64
+    }).then(() => {
+      alert("📧 Comprobante enviado con PDF adjunto.");
+    }).catch((error) => {
+      console.error("Error EmailJS:", error);
+      alert("⚠️ Error al enviar el correo. Revise consola.");
+    });
+
+  } catch(err) {
+    console.error("Error PDF:", err);
+    alert("⚠️ Error al generar el PDF.");
+  }
 });
