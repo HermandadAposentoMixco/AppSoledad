@@ -52,7 +52,16 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "virgendelasoledadmixco@gmail.com",
-    pass: "rzbx lymy lpzt lynm" // TU CONTRASEÑA DE APLICACIÓN
+    pass: "rzbxlymylpztlynm" // 🔐 SIN ESPACIOS
+  }
+});
+
+// Verificar conexión SMTP
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Error con el correo:", error);
+  } else {
+    console.log("✅ Servidor de correo listo para enviar mensajes");
   }
 });
 
@@ -68,17 +77,15 @@ app.get("/api/devotos/:cui", (req, res) => {
   });
 });
 
-app.post("/api/devotos", async (req, res) => {
+app.post("/api/devotos", (req, res) => {
   const { cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo } = req.body;
 
   if (!cui || !nombres || !apellidos || !correo) {
     return res.status(400).json({ error: "Faltan campos obligatorios" });
   }
 
-  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], async (err, results) => {
+  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], (err, results) => {
     if (err) return res.status(500).json({ error: "Error verificando registro" });
-
-    const verificationLink = `https://tusitio.com/verificar?correo=${encodeURIComponent(correo)}`;
 
     const mailOptions = {
       from: '"Virgen de la Soledad" <virgendelasoledadmixco@gmail.com>',
@@ -86,9 +93,19 @@ app.post("/api/devotos", async (req, res) => {
       subject: "Confirmación de registro",
       html: `
         <h2>¡Gracias por registrarte!</h2>
-        <p>Estimado Devota(o) con gran gozo espiritual y profundo devoción, comunicamos que la hermandad de la Virgen Soledad ha registrado(a) en nuestra base de datos, su pre-inscripción. Invitamos a qué pueda estar atento a nuestras redes sociales donde estaremos indicando la fecha de entrega de su cartulina así mismo del pago correspondiente.</p>
+        <p>Estimado Devota(o), con gran gozo espiritual y profunda devoción comunicamos que la Hermandad de la Virgen de la Soledad ha registrado su pre-inscripción.</p>
+        <p>Le invitamos a estar atento a nuestras redes sociales donde indicaremos la fecha de entrega de su cartulina y el pago correspondiente.</p>
         <p>¡Que la fe y la devoción sigan guiando nuestro caminar!</p>
       `
+    };
+
+    const enviarCorreo = async () => {
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log("📧 Correo enviado a:", correo);
+      } catch (error) {
+        console.error("❌ Error al enviar correo:", error);
+      }
     };
 
     if (results.length > 0) {
@@ -102,8 +119,7 @@ app.post("/api/devotos", async (req, res) => {
       db.query(sql, params, async err2 => {
         if (err2) return res.status(500).json({ error: "Error al actualizar registro" });
 
-        // Enviar correo
-        await transporter.sendMail(mailOptions);
+        await enviarCorreo();
         res.json({ message: "Actualizado correctamente y correo enviado" });
       });
     } else {
@@ -116,8 +132,7 @@ app.post("/api/devotos", async (req, res) => {
       db.query(sql, params, async err3 => {
         if (err3) return res.status(500).json({ error: "Error al guardar registro" });
 
-        // Enviar correo
-        await transporter.sendMail(mailOptions);
+        await enviarCorreo();
         res.json({ message: "Registrado correctamente y correo enviado" });
       });
     }
