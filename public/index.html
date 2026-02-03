@@ -6,6 +6,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Confirmación - Generador Comprobante con QR</title>
 
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  emailjs.init("wzvuFnHw4_eWKtlj5");
+</script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -262,95 +266,93 @@
     });
 
     // Generar comprobante
-    devotoForm.addEventListener('submit', async e=>{
-      e.preventDefault();
-      const data = {
-        cui: onlyDigits(cuiForm.value),
-        nombres: nombresEl.value.trim(),
-        apellidos: apellidosEl.value.trim(),
-        telefono: telefonoEl.value.trim(),
-        correo: correoEl.value.trim(),
-        direccion: direccionEl.value.trim(),
-        fn: fnEl.value,
-        nota: notaEl.value.trim(),
-        sexo: (document.querySelector('input[name="sexo"]:checked')||{}).value||''
-      };
+   devotoForm.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const data = {
+    cui: onlyDigits(cuiForm.value),
+    nombres: nombresEl.value.trim(),
+    apellidos: apellidosEl.value.trim(),
+    telefono: telefonoEl.value.trim(),
+    correo: correoEl.value.trim(),
+    direccion: direccionEl.value.trim(),
+    fn: fnEl.value,
+    nota: notaEl.value.trim(),
+    sexo: (document.querySelector('input[name="sexo"]:checked')||{}).value||''
+  };
 
-      if(!data.nombres||!data.apellidos||!data.cui||!data.correo){alert('Complete los campos obligatorios.'); return;}
-
-      try {
-        const res = await fetch(`${API_URL}/devotos`, {
-          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)
-        });
-        const r = await res.json();
-        alert(r.message);
-      } catch {
-        alert('Error al guardar en la base de datos.');
-      }
-
-      // Mostrar datos en el comprobante
-      tdCui.textContent = data.cui; tdNombres.textContent = data.nombres; tdApellidos.textContent = data.apellidos;
-      tdFn.textContent = data.fn || '-'; tdTel.textContent = data.telefono || '-'; tdCorreo.textContent = data.correo || '-';
-      tdDir.textContent = data.direccion || '-'; tdNota.textContent = data.nota || '-';
-      cuiGrande.textContent = data.cui; fechaComprobante.textContent = new Date().toLocaleDateString();
-
-      // Generar QR
-      const pass = randomPassword(6); contraseñaPdf.textContent = pass;
-      const qrContent = [
-        `CUI: ${data.cui}`,
-        `Nombres: ${data.nombres}`,
-        `Apellidos: ${data.apellidos}`,
-        `Correo: ${data.correo}`,
-        `Teléfono: ${data.telefono||'-'}`,
-        `Dirección: ${data.direccion||'-'}`,
-        `Sexo: ${data.sexo||'-'}`,
-        `Turno: ${data.nota||'-'}`,
-        `Contraseña: ${pass}`
-      ].join('\n');
-
-      try{
-        const dataUrl = await QRCode.toDataURL(qrContent,{width:400,margin:1});
-        qrComprobante.src = dataUrl;
-        previewQr.src = dataUrl;
-        previewText.textContent = qrContent;
-      } catch(err){alert('Error generando QR'); return;}
-
-      comprobanteContainer.style.display = 'block';
-      document.getElementById("btnPDF").addEventListener("click", async () => {
-  const el = document.getElementById('comprobante');
-  const canvas = await html2canvas(el,{scale:2,useCORS:true});
-  const imgData = canvas.toDataURL('image/png');
-
-  const pdf = new jsPDF({unit:'mm', format:'a4'});
-  const pdfW = pdf.internal.pageSize.getWidth();
-  const pdfH = pdf.internal.pageSize.getHeight();
-  const imgProps = pdf.getImageProperties(imgData);
-
-  let imgWidth = pdfW;
-  let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-  
-  if(imgHeight > pdfH){
-    const scale = pdfH / imgHeight;
-    imgWidth *= scale;
-    imgHeight *= scale;
+  if(!data.nombres||!data.apellidos||!data.cui||!data.correo){
+    alert('Complete los campos obligatorios.');
+    return;
   }
 
-  pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
-  pdf.save(`comprobanteDevoto_${cuiForm.value}.pdf`);
+  try {
+    const res = await fetch(`${API_URL}/devotos`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const r = await res.json();
+    alert(r.message || "Registro guardado.");
+  } catch {
+    alert('Error al guardar en la base de datos.');
+  }
+
+  // Mostrar datos en el comprobante
+  tdCui.textContent = data.cui;
+  tdNombres.textContent = data.nombres;
+  tdApellidos.textContent = data.apellidos;
+  tdFn.textContent = data.fn || '-';
+  tdTel.textContent = data.telefono || '-';
+  tdCorreo.textContent = data.correo || '-';
+  tdDir.textContent = data.direccion || '-';
+  tdNota.textContent = data.nota || '-';
+  cuiGrande.textContent = data.cui;
+  fechaComprobante.textContent = new Date().toLocaleDateString();
+
+  // Generar contraseña y QR
+  const pass = randomPassword(6);
+  contraseñaPdf.textContent = pass;
+
+  const qrContent = [
+    `CUI: ${data.cui}`,
+    `Nombres: ${data.nombres}`,
+    `Apellidos: ${data.apellidos}`,
+    `Correo: ${data.correo}`,
+    `Teléfono: ${data.telefono||'-'}`,
+    `Dirección: ${data.direccion||'-'}`,
+    `Sexo: ${data.sexo||'-'}`,
+    `Turno: ${data.nota||'-'}`,
+    `Contraseña: ${pass}`
+  ].join('\n');
+
+  try {
+    const dataUrl = await QRCode.toDataURL(qrContent,{width:400,margin:1});
+    qrComprobante.src = dataUrl;
+    previewQr.src = dataUrl;
+    previewText.textContent = qrContent;
+  } catch(err){
+    alert('Error generando QR');
+    return;
+  }
+
+  comprobanteContainer.style.display = 'block';
+
+  // 📧 Enviar correo automáticamente con EmailJS
+  emailjs.send("service_k7ihihy", "template_38g2ifj", {
+    nombres: data.nombres,
+    apellidos: data.apellidos,
+    correo: data.correo,
+    cui: data.cui,
+    telefono: data.telefono || "No proporcionado",
+    direccion: data.direccion || "No proporcionado",
+    turno: data.nota || "No especificado",
+    fecha: new Date().toLocaleDateString(),
+    contraseña: pass
+  }).then(() => {
+    alert("📧 Comprobante enviado al correo del usuario.");
+  }).catch((error) => {
+    console.error("Error enviando correo:", error);
+    alert("⚠️ No se pudo enviar el correo, pero el registro sí se guardó.");
+  });
+
 });
-
-
-    });
-
-    // Descargar QR
-    downloadQrBtn.addEventListener('click',()=>{
-      if(!previewQr.src) { alert('No hay QR generado aún.'); return; }
-      const a = document.createElement('a');
-      a.href = previewQr.src;
-      a.download = `QR_${cuiForm.value}.png`;
-      a.click();
-    });
-  </script>
-</body>
-</html>
-
