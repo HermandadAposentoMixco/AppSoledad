@@ -3,6 +3,7 @@ import cors from "cors";
 import mysql from "mysql2";
 import path from "path";
 import { fileURLToPath } from "url";
+import nodemailer from "nodemailer";
 
 // --------------------------------------------------
 // CONFIG BÁSICA
@@ -45,6 +46,17 @@ const db = mysql.createPool({
 });
 
 // --------------------------------------------------
+// CONFIG CORREO (GMAIL SMTP)
+// --------------------------------------------------
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "virgendelasoledadmixco@gmail.com",
+    pass: "rzbx lymy lpzt lynm" // TU CONTRASEÑA DE APLICACIÓN
+  }
+});
+
+// --------------------------------------------------
 // RUTAS API
 // --------------------------------------------------
 app.get("/api/devotos/:cui", (req, res) => {
@@ -56,15 +68,28 @@ app.get("/api/devotos/:cui", (req, res) => {
   });
 });
 
-app.post("/api/devotos", (req, res) => {
+app.post("/api/devotos", async (req, res) => {
   const { cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo } = req.body;
 
   if (!cui || !nombres || !apellidos || !correo) {
     return res.status(400).json({ error: "Faltan campos obligatorios" });
   }
 
-  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], (err, results) => {
+  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], async (err, results) => {
     if (err) return res.status(500).json({ error: "Error verificando registro" });
+
+    const verificationLink = `https://tusitio.com/verificar?correo=${encodeURIComponent(correo)}`;
+
+    const mailOptions = {
+      from: '"Virgen de la Soledad" <virgendelasoledadmixco@gmail.com>',
+      to: correo,
+      subject: "Confirmación de registro",
+      html: `
+        <h2>¡Gracias por registrarte!</h2>
+        <p>Estimado Devota(o) con gran gozo espiritual y profundo devoción, comunicamos que la hermandad de la Virgen Soledad ha registrado(a) en nuestra base de datos, su pre-inscripción. Invitamos a qué pueda estar atento a nuestras redes sociales donde estaremos indicando la fecha de entrega de su cartulina así mismo del pago correspondiente.</p>
+        <p>¡Que la fe y la devoción sigan guiando nuestro caminar!</p>
+      `
+    };
 
     if (results.length > 0) {
       const sql = `
@@ -74,9 +99,12 @@ app.post("/api/devotos", (req, res) => {
       `;
       const params = [nombres, apellidos, telefono, correo, direccion, fn, nota, sexo, cui];
 
-      db.query(sql, params, err2 => {
+      db.query(sql, params, async err2 => {
         if (err2) return res.status(500).json({ error: "Error al actualizar registro" });
-        res.json({ message: "Actualizado correctamente" });
+
+        // Enviar correo
+        await transporter.sendMail(mailOptions);
+        res.json({ message: "Actualizado correctamente y correo enviado" });
       });
     } else {
       const sql = `
@@ -85,9 +113,12 @@ app.post("/api/devotos", (req, res) => {
       `;
       const params = [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo];
 
-      db.query(sql, params, err3 => {
+      db.query(sql, params, async err3 => {
         if (err3) return res.status(500).json({ error: "Error al guardar registro" });
-        res.json({ message: "Registrado correctamente" });
+
+        // Enviar correo
+        await transporter.sendMail(mailOptions);
+        res.json({ message: "Registrado correctamente y correo enviado" });
       });
     }
   });
