@@ -363,8 +363,8 @@
     const pdfBase64 = pdf.output('datauristring');
 
     // 📧 Enviar correo con PDF adjunto
-    emailjs.send("service_k7ihihy", "template_cp0j0z7", {
-  correo: data.correo,
+    emailjs.send("service_emailjs", "template_cp0j0z7", {
+      correo: data.correo,
   nombres: data.nombres,
   apellidos: data.apellidos,
   cui: data.cui,
