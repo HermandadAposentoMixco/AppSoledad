@@ -360,20 +360,21 @@
     pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
     pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
 
-    const pdfBase64 = pdf.output('datauristring');
 
-    // 📧 Enviar correo con PDF adjunto
-    emailjs.send("service_emailjs", "template_cp0j0z7", {
-      correo: data.correo,
+const pdfBase64 = pdf.output("datauristring");
+
+emailjs.send("service_k7ihihy", "template_cp0j0z7", {
+  to_email: data.correo,
   nombres: data.nombres,
   apellidos: data.apellidos,
   cui: data.cui,
-  turno: data.nota
+  turno: data.nota,
+  pdf_file: pdfBase64
 }).then(() => {
-  alert("📧 Correo enviado correctamente.");
+  alert("📧 Correo enviado correctamente con el comprobante adjunto.");
 }).catch((error) => {
   console.error("Error EmailJS:", error);
-  alert("❌ Error al enviar el correo.");
+  alert("❌ Error al enviar el correo. Revisa la consola.");
 });
 
 
